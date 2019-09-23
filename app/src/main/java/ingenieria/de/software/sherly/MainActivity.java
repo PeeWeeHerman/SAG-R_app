@@ -3,6 +3,8 @@ package ingenieria.de.software.sherly;
 import android.app.Activity;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.widget.LinearLayout;
+import 	android.widget.RelativeLayout;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
@@ -32,7 +34,7 @@ import android.content.Intent;
 
 public class MainActivity extends AppCompatActivity {
     //nombre del dispositivo emparejado (en nuestro caso va a ser dinámico)
-    private static final  String DEVICE_NAME = "Galaxy A30";
+    private static final  String DEVICE_NAME = "SHERLY";
     BluetoothAdapter mBluetoothAdapter;
     BluetoothSocket mmSocket;
     BluetoothDevice mmDevice;
@@ -235,7 +237,7 @@ public class MainActivity extends AppCompatActivity {
     void beginListenForData()
     {
         final Handler handler = new Handler();
-        final byte delimiter = 46; //Utilizamos el punto (.) como último caracter para entender que el emisor termina de mandarnos datos
+        final byte delimiter = 10; //Utilizamos el punto (.) como último caracter para entender que el emisor termina de mandarnos datos
 
         stopWorker = false;
         readBufferPosition = 0;
@@ -273,7 +275,11 @@ public class MainActivity extends AppCompatActivity {
                                     {
                                         public void run()
                                         {
-                                            Toast.makeText(getApplicationContext(),data,Toast.LENGTH_SHORT).show();
+                                           Toast toast = Toast.makeText(getApplicationContext(),data,Toast.LENGTH_SHORT);
+                                            LinearLayout toastLayout = (LinearLayout) toast.getView();
+                                            TextView toastTV = (TextView) toastLayout.getChildAt(0);
+                                            toastTV.setTextSize(30);
+                                            toast.show();
                                         }
                                     });
                                 }
@@ -303,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
         String msg = text;
         msg += "\n";
         mmOutputStream.write(msg.getBytes());
-        Toast.makeText(getApplicationContext(),"Se envió el mensaje: " msg + " al dispositivo Bluetooth",Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(),"Se envió el mensaje: " + msg + " al dispositivo Bluetooth",Toast.LENGTH_SHORT).show();
     }
 
     void closeBT() throws IOException
