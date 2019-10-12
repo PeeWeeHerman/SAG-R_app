@@ -28,8 +28,10 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Set;
 import java.util.UUID;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -38,18 +40,29 @@ import androidx.core.view.MotionEventCompat;
 public class MainActivity extends AppCompatActivity {
     //nombre del dispositivo emparejado (en nuestro caso va a ser dinámico)
     private static final  String DEVICE_NAME = "SHERLY";
-    private BluetoothAdapter mBluetoothAdapter;
+    private final String DEBUG_TAG = "Estado de SHERLY: ";
+    private final int POSITION_REQUEST_CODE = 1;
+
+    //Instancia del driver de bluetooth
+    BluetoothAdapter mBluetoothAdapter;
+    //Instancias de la interfaz del driver para entrada y salida
     private BluetoothSocket mmSocket;
     private BluetoothDevice mmDevice;
+    //Instancia de datos de entrada y salida de la interfaz
     private OutputStream mmOutputStream;
     private InputStream mmInputStream;
-    private Thread workerThread;
+    //Hilo para el manejo de datos desde la interfaz
+    Thread workerThread;
     byte[] readBuffer;
+    //posición del buffer que vamos leyendo
     int readBufferPosition;
-    int counter;
+    //flag que indica cuando dejar de leer del socket
     volatile boolean stopWorker;
+    //imagen de "cargando"
     ProgressBar spinner;
-    private Button mDiscoverBtn;
+    //TextView utilizado para las interacciones SWIPE (mide el tamaño de la pantalla)
+    TextView touchPanel;
+    //Interceptor para el evento de encontrar a SHERLY
     private static BroadcastReceiver  mReceiver;
     /**
      Método que se ejecuta cuando se crea un Activity o pantalla
@@ -61,124 +74,114 @@ public class MainActivity extends AppCompatActivity {
         //seteo el xml de layout que está en /res/layout
         setContentView(R.layout.activity_main);
         spinner = (ProgressBar)findViewById(R.id.loading);
-        //tomo el TextView con id "tochPanel", ver content_main.xml
-        TextView txt = findViewById(R.id.touchPanel);
+        touchPanel = findViewById(R.id.touchPanel);
+        mReceiver = getBroadcastReceiver();
 
+        // Pido permisos para activar el Bluetooth
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+        {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, POSITION_REQUEST_CODE);
+        }else{
+            findBluetooth();
+        }
 
-        mReceiver = new BroadcastReceiver() {
-            public void onReceive(Context context, Intent intent) {
-                String action = intent.getAction();
-                Log.d("SHERLY","Entro BB");
-                if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)) {
-                    spinner.setVisibility(View.VISIBLE);
-                    //discovery starts, we can show progress dialog or perform other tasks
-                } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
-                    //discovery finishes, dismis progress dialog
-                    spinner.setVisibility(View.GONE);
-                } else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                    spinner.setVisibility(View.GONE);
-                    //bluetooth device found
-                    mmDevice = (BluetoothDevice) intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    if(DEVICE_NAME.equals(mmDevice.getName())){
-                        Toast.makeText(getApplicationContext(),"Se encontró el dispositivo Bluetooth" + mmDevice.getName(),Toast.LENGTH_LONG).show();
-                        try {
-                            openBT();
-                            sendData(" Conecto con SHERLY Bluetooth");
-                        }catch(Exception e){
-                            Toast.makeText(getApplicationContext(),e.getMessage(),Toast.LENGTH_LONG).show();
-                        }
-                    }
-
-                }
+        //Defino comportamiento Swipe
+        touchPanel.setOnTouchListener(new OnSwipeTouchListener(getApplicationContext()) {
+            public void onSwipeTop() {
+                notifyMovement("Movió arriba", Color.YELLOW);
             }
-        };
+            public void onSwipeRight() {
+                notifyMovement("Movió derecha", Color.RED);
+            }
+            public void onSwipeLeft() {
+                notifyMovement("Movió izquierda", Color.BLUE);
+            }
+            public void onSwipeBottom() {
+                notifyMovement("Movió abajo", Color.BLACK);
+            }
+        });
+    }
 
+    private void findBluetooth(){
         //Buscar los dispositivos bluetooth y conectarse a uno especificado
         //Para poder realizar la conexión con Bluetooth, se debió solicitar permisos al usuario para usarlo.
         //Para ello, en el archivo AndroidManifest.xml, se agregaron los permisos Bluetooth
         try
         {
             findBT();
-
         }
-        catch (Exception ex) { }
+        catch (Exception ex) {
+            Log.d(DEBUG_TAG, "No se pudo utilizar el Bluetooth" + ex.getMessage());
+            Toast.makeText(MainActivity.this, "Bluetooth no disponible, reintente nuevamente" , Toast.LENGTH_LONG).show();
+        }
+    }
+    /**
+     * Cuando responde por los permisos el usuario
+     * */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        // Check which request we're responding to
+        if (requestCode == POSITION_REQUEST_CODE) {
+            if (grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                findBluetooth();
+                // Camera permission has been granted, preview can be displayed
+                Log.d(DEBUG_TAG, "Se obtuvieron permisos de posición.");
+            } else {
+                Log.d(DEBUG_TAG, "No se obtuvieron permisos de posición.");
+                finish();
+                System.exit(0);
 
-        //le asigno evento Swipe
-        //TODO: mover lo que hace con cada Swipe a un método para no repetir código
-        txt.setOnTouchListener(new OnSwipeTouchListener(getApplicationContext()) {
-            public void onSwipeTop() {
-                Toast.makeText(MainActivity.this, "Swipe arriba!", Toast.LENGTH_LONG).show();
-                //TODO: ver si se puede acceder directamente al padre del evento, es decir el textView y no volverlo a buscar con findViewById
-                TextView txt = findViewById(R.id.touchPanel);
-                //lo cambio de color
-                txt.setBackgroundColor(Color.BLUE);
-                try {
-                    //envío un mensaje al dispositivo Bluetooth al cual me emparejé
-                    sendData("Movio arriba");
-                }catch (IOException ex) {
-                    //TODO implementar
+            }
+        }
+
+    }
+
+/**
+ * Notifica al usuario y al bluetooth el movimiento de deslizar que hizo
+ * */
+    private void notifyMovement(String movement, int color){
+        Toast.makeText(MainActivity.this, movement, Toast.LENGTH_LONG).show();
+        //lo cambio de color
+        touchPanel.setBackgroundColor(color);
+        try {
+            //envío un mensaje al dispositivo Bluetooth al cual me emparejé
+            sendData(movement);
+        }catch (IOException ex) {
+            Log.d(DEBUG_TAG , "no se pudo notificar el movimiento");
+        }
+    }
+/**
+ * Devuelve un interceptor de eventos de Bluetooth
+ * */
+    private BroadcastReceiver getBroadcastReceiver(){
+        return new BroadcastReceiver() {
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)) {
+                    Log.d(DEBUG_TAG, "Buscando dispositivos Bluetooth...");
+                    spinner.setVisibility(View.VISIBLE);
+                    //discovery starts, we can show progress dialog or perform other tasks
+                } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
+                    Log.d(DEBUG_TAG, "Búsqueda Bluetooth finalizada.");
+                    spinner.setVisibility(View.GONE);
+                } else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                    Log.d(DEBUG_TAG, "Se encontró un dispositivo Bluetooth");
+                    spinner.setVisibility(View.GONE);
+                    //bluetooth device found
+                    mmDevice = (BluetoothDevice) intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    String deviceName = mmDevice.getName();
+                    if(DEVICE_NAME.equals(deviceName)){
+                        Log.d(DEBUG_TAG, "Se encontró a " + deviceName);
+                        Toast.makeText(getApplicationContext(),"Se encontró a " + deviceName,Toast.LENGTH_LONG).show();
+                        openBT();
+                    }
+
                 }
             }
-
-            public void onSwipeRight() {
-                Toast.makeText(MainActivity.this, "Swipe derecha!", Toast.LENGTH_LONG).show();
-                //TODO: ver si se puede acceder directamente al padre del evento, es decir el textView y no volverlo a buscar con findViewById
-                TextView txt = findViewById(R.id.touchPanel);
-                //lo cambio de color
-                txt.setBackgroundColor(Color.RED);
-                try {
-                    //envío un mensaje al dispositivo Bluetooth al cual me emparejé
-                    sendData("Movio derecha");
-                }catch (IOException ex) { }
-            }
-
-            public void onSwipeLeft() {
-                Toast.makeText(MainActivity.this, "Swipe izquierda!", Toast.LENGTH_LONG).show();
-                //TODO: ver si se puede acceder directamente al padre del evento, es decir el textView y no volverlo a buscar con findViewById
-                TextView txt = findViewById(R.id.touchPanel);
-                //lo cambio de color
-                txt.setBackgroundColor(Color.BLACK);
-                try {
-                    //envío un mensaje al dispositivo Bluetooth al cual me emparejé
-                    sendData("Movio izquierda");
-                }catch (IOException ex) { }
-            }
-
-            public void onSwipeBottom() {
-                Toast.makeText(MainActivity.this, "Swipe abajo!", Toast.LENGTH_LONG).show();
-                //TODO: ver si se puede acceder directamente al padre del evento, es decir el textView y no volverlo a buscar con findViewById
-                TextView txt = findViewById(R.id.touchPanel);
-                //lo cambio de color
-                txt.setBackgroundColor(Color.YELLOW);
-                try {
-                    //envío un mensaje al dispositivo Bluetooth al cual me emparejé
-                    sendData("Movio abajo");
-                }catch (IOException ex) { }
-            }
-        });
+        };
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in Androidst.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
 
     /**
      Método que se ejecuta cuando el usuario realiza gestos de tocar pantalla
@@ -216,6 +219,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     /**
      * @Link
      * dedique: 3 hs sabado 28/9,   lunes 23/9  5hs,  domingo 22/9  5hs
@@ -230,55 +234,26 @@ public class MainActivity extends AppCompatActivity {
      * The problem here was that permission had to be granted at runtime, and not only in the manifest,
      * since ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION are grouped in the DANGEROUS permissions group.
      * */
-    void findBT()
+    void findBT () throws Exception
     {
-
-        // Ask for location permission if not already allowed
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
-
-        //Obtener un objeto que representa el dispositivo de bluetooth que posee el móvil
-
+        //Obtener una instancia que representa al Driver de Bluetooth
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if(mBluetoothAdapter == null)
         {
+            Log.d(DEBUG_TAG, "Bluetooth no disponible");
             Toast.makeText(getApplicationContext(),"Bluetooth no disponible",Toast.LENGTH_LONG).show();
+            throw new Exception("Adaptador no disponible");
         }
         //Bluetooth está disponible, pero no habilitado
         if(!mBluetoothAdapter.isEnabled())
         {
-            //intentar habilitarlo
-            Toast.makeText(getApplicationContext(),"Encendiendo Bluetooth...",Toast.LENGTH_LONG).show();
+            Log.d(DEBUG_TAG,"Solicitando al usuario activar Bluetooth...");
             Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBluetooth, 0);
         }
-
-
-        /*BluetoothAdapter.LeScanCallback mLeScanCallback = new BluetoothAdapter.LeScanCallback() {
-            @Override
-            public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
-                // BLE device was found, we can get its information now
-                Toast.makeText(getApplicationContext(),"Se encontró el dispositivo Bluetooth" + device.getName(),Toast.LENGTH_LONG).show();
-            }
-        };*/
-
-        // This callback is added to the start scan method as a parameter in this way
-        //mBluetoothAdapter.startLeScan(mLeScanCallback);
-
-        IntentFilter filter = new IntentFilter();
-
-        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
-        filter.addAction(BluetoothDevice.ACTION_FOUND);
-        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-
-        registerReceiver(mReceiver, filter);
-        mBluetoothAdapter.startDiscovery();
-
-
-        Toast.makeText(getApplicationContext(),"Se inicia búsqueda Bluetooth",Toast.LENGTH_LONG).show();
-
+        spinner.setVisibility(View.VISIBLE);
         //obtengo los dipositivos emparejados con el móvil
-        /*Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
         if(pairedDevices.size() > 0)
         {
             for(BluetoothDevice device : pairedDevices)
@@ -286,29 +261,52 @@ public class MainActivity extends AppCompatActivity {
                 //me conecto a uno específico
                 if(device.getName().equals(DEVICE_NAME))
                 {
+                    Log.d(DEBUG_TAG, "Se encontró a dispositivo " + device.getName());
                     mmDevice = device;
-                    break;
+                    openBT();
+                    spinner.setVisibility(View.GONE);
+                    return;
                 }
             }
-        }*/
-        //Toast.makeText(getApplicationContext(),"Se encontró el dispositivo Bluetooth",Toast.LENGTH_LONG).show();
+        }
+
+        if(mmDevice == null){
+            Log.d(DEBUG_TAG, "No se encontró " + DEVICE_NAME + " vinculado. Se inicia búsqueda...");
+            IntentFilter filter = new IntentFilter();
+
+            filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+            filter.addAction(BluetoothDevice.ACTION_FOUND);
+            filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+
+            registerReceiver(mReceiver, filter);
+            mBluetoothAdapter.startDiscovery();
+
+            Toast.makeText(getApplicationContext(),DEVICE_NAME + " no vinculado, se inicia búsqueda...",Toast.LENGTH_LONG).show();
+        }
     }
 
 
     /**
      Inicia un socket bluetooth de escucha para la comunicación
      */
-    void openBT() throws IOException
+    void openBT()
     {
-        UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //Standard SerialPortService ID
-        mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
-        mmSocket.connect();
-        mmOutputStream = mmSocket.getOutputStream();
-        mmInputStream = mmSocket.getInputStream();
+        try {
+            Toast.makeText(getApplicationContext(), "Conectando con " + mmDevice.getName() + "...", Toast.LENGTH_LONG).show();
 
-        beginListenForData();
+            UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //Standard SerialPortService ID
+            mmSocket = mmDevice.createRfcommSocketToServiceRecord(uuid);
+            mmSocket.connect();
+            mmOutputStream = mmSocket.getOutputStream();
+            mmInputStream = mmSocket.getInputStream();
 
-        Toast.makeText(getApplicationContext(),"tunel Bluetooth abierto",Toast.LENGTH_LONG).show();
+            beginListenForData();
+            sendData("Conectado con " + mmDevice.getName());
+            Log.d(DEBUG_TAG, "Túnel bluetooth abierto");
+        }catch(IOException e){
+            Log.d(DEBUG_TAG, "No se pudo conectar con " + mmDevice.getName());
+            Toast.makeText(getApplicationContext(),e.getMessage(),Toast.LENGTH_LONG).show();
+        }
     }
 
     /**
@@ -318,7 +316,7 @@ public class MainActivity extends AppCompatActivity {
     void beginListenForData()
     {
         final Handler handler = new Handler();
-        final byte delimiter = 10; //Utilizamos el punto (.) como último caracter para entender que el emisor termina de mandarnos datos
+        final byte delimiter = 46; //Utilizamos el punto (.) como último caracter para entender que el emisor termina de mandarnos datos
 
         stopWorker = false;
         readBufferPosition = 0;
@@ -336,6 +334,7 @@ public class MainActivity extends AppCompatActivity {
                         int bytesAvailable = mmInputStream.available();
                         if(bytesAvailable > 0)
                         {
+                            Log.d(DEBUG_TAG,"Se recibió data de "+ mmDevice.getName() + ". Leyendo...");
                             byte[] packetBytes = new byte[bytesAvailable];
                             //voy leyendo los bytes disponibles
                             mmInputStream.read(packetBytes);
@@ -346,6 +345,7 @@ public class MainActivity extends AppCompatActivity {
                                 //hasta que el emisor no envie un caracter de fin de mensaje, seguimos leyendo (definimos que sea el punto , linea 215)
                                 if(b == delimiter)
                                 {
+                                    Log.d(DEBUG_TAG,"Fin del mensaje.");
                                     //cuando manda un punto, mostramos el mensaje enviado, decodificandolo con US-ASCII
                                     byte[] encodedBytes = new byte[readBufferPosition];
                                     System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
@@ -373,6 +373,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     catch (IOException ex)
                     {
+                        Log.d(DEBUG_TAG, "Error en la comunicación: " +ex.getMessage());
                         stopWorker = true;
                     }
                 }
@@ -390,6 +391,7 @@ public class MainActivity extends AppCompatActivity {
         if(mmOutputStream != null){
             String msg = text;
             msg += "\n";
+            Log.d(DEBUG_TAG, " Se enviará " + text + " a " +mmDevice.getName());
             mmOutputStream.write(msg.getBytes());
             Toast.makeText(getApplicationContext(),"Se envió el mensaje: " + msg + " al dispositivo Bluetooth",Toast.LENGTH_LONG).show();
         }else{
