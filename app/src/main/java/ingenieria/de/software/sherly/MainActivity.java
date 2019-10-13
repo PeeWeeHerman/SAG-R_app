@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +14,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
+import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.Menu;
@@ -30,6 +32,7 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -45,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private static final  String DEVICE_NAME = "SHERLY";
     private final String DEBUG_TAG = "Estado de SHERLY: ";
     private final int POSITION_REQUEST_CODE = 1;
+    private final int VOICE_REQUEST_CODE = 2;
 
     //Instancia del driver de bluetooth
     BluetoothAdapter mBluetoothAdapter;
@@ -94,6 +98,17 @@ public class MainActivity extends AppCompatActivity {
         //Defino comportamiento Swipe
         touchPanel.setOnTouchListener(new OnSwipeTouchListener(getApplicationContext()) {
             public void onSwipeTop() {
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+                try {
+                    startActivityForResult(intent, VOICE_REQUEST_CODE);
+                } catch (ActivityNotFoundException a) {
+                    Toast.makeText(getApplicationContext(),
+                            "Lo siento, no hay microfono",
+                            Toast.LENGTH_SHORT).show();
+                }
                 notifyMovement("Movió arriba", Color.YELLOW);
             }
             public void onSwipeRight() {
@@ -129,6 +144,21 @@ public class MainActivity extends AppCompatActivity {
         catch (Exception ex) {
             Log.d(DEBUG_TAG, "No se pudo utilizar el Bluetooth" + ex.getMessage());
             Toast.makeText(MainActivity.this, "Bluetooth no disponible, reintente nuevamente" , Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case VOICE_REQUEST_CODE: {
+                if (resultCode == RESULT_OK && null != data) {
+                    ArrayList result = data
+                            .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    Toast.makeText(getApplicationContext(),result.get(0).toString(),Toast.LENGTH_LONG).show();
+                }
+                break;
+            }
         }
     }
     /**
