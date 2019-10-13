@@ -14,6 +14,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
@@ -134,6 +135,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void findBluetooth(){
+        mmSocket = null;
+        mmDevice = null;
+        //Instancia de datos de entrada y salida de la interfaz
+        mmOutputStream = null;
+        mmInputStream = null;
+
         //Buscar los dispositivos bluetooth y conectarse a uno especificado
         //Para poder realizar la conexión con Bluetooth, se debió solicitar permisos al usuario para usarlo.
         //Para ello, en el archivo AndroidManifest.xml, se agregaron los permisos Bluetooth
@@ -352,6 +359,8 @@ public class MainActivity extends AppCompatActivity {
         }catch(IOException e){
             Log.d(DEBUG_TAG, "No se pudo conectar con " + mmDevice.getName());
             Toast.makeText(getApplicationContext(),e.getMessage(),Toast.LENGTH_LONG).show();
+            SystemClock.sleep(2000);
+            findBluetooth();
         }
     }
 
