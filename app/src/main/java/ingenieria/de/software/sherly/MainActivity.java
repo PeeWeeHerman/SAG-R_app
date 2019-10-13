@@ -13,6 +13,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -20,6 +21,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -28,6 +30,7 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -64,6 +67,8 @@ public class MainActivity extends AppCompatActivity {
     TextView touchPanel;
     //Interceptor para el evento de encontrar a SHERLY
     private static BroadcastReceiver  mReceiver;
+    TextToSpeech t1;
+
     /**
      Método que se ejecuta cuando se crea un Activity o pantalla
      */
@@ -73,6 +78,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         //seteo el xml de layout que está en /res/layout
         setContentView(R.layout.activity_main);
+
         spinner = (ProgressBar)findViewById(R.id.loading);
         touchPanel = findViewById(R.id.touchPanel);
         mReceiver = getBroadcastReceiver();
@@ -98,6 +104,16 @@ public class MainActivity extends AppCompatActivity {
             }
             public void onSwipeBottom() {
                 notifyMovement("Movió abajo", Color.BLACK);
+            }
+        });
+
+
+        t1=new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if(status != TextToSpeech.ERROR) {
+                    t1.setLanguage(new Locale("es", "AR"));
+                }
             }
         });
     }
@@ -316,7 +332,7 @@ public class MainActivity extends AppCompatActivity {
     void beginListenForData()
     {
         final Handler handler = new Handler();
-        final byte delimiter = 46; //Utilizamos el punto (.) como último caracter para entender que el emisor termina de mandarnos datos
+        final byte delimiter = 10; //Utilizamos el punto (.) como último caracter para entender que el emisor termina de mandarnos datos
 
         stopWorker = false;
         readBufferPosition = 0;
@@ -356,6 +372,7 @@ public class MainActivity extends AppCompatActivity {
                                     {
                                         public void run()
                                         {
+                                            t1.speak(data, TextToSpeech.QUEUE_FLUSH, null);
                                             Toast toast = Toast.makeText(getApplicationContext(),data,Toast.LENGTH_LONG);
                                             LinearLayout toastLayout = (LinearLayout) toast.getView();
                                             TextView toastTV = (TextView) toastLayout.getChildAt(0);
