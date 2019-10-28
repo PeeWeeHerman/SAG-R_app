@@ -2,6 +2,7 @@ package ingenieria.de.software.sherly;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -50,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
     private final String DEBUG_TAG = "Estado de SHERLY: ";
     private final int POSITION_REQUEST_CODE = 1;
     private final int VOICE_REQUEST_CODE = 2;
+    private final int BLUETOOTH_REQUEST_CODE = 3;
 
     //Instancia del driver de bluetooth
     BluetoothAdapter mBluetoothAdapter;
@@ -73,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
     //Interceptor para el evento de encontrar a SHERLY
     private static BroadcastReceiver  mReceiver;
     TextToSpeech t1;
+    Button btnBuscarHTTP;
 
     /**
      Método que se ejecuta cuando se crea un Activity o pantalla
@@ -84,17 +87,11 @@ public class MainActivity extends AppCompatActivity {
         //seteo el xml de layout que está en /res/layout
         setContentView(R.layout.activity_main);
 
-        spinner = (ProgressBar)findViewById(R.id.loading);
+        spinner = findViewById(R.id.loading);
         touchPanel = findViewById(R.id.touchPanel);
         mReceiver = getBroadcastReceiver();
+        btnBuscarHTTP = findViewById(R.id.buscarHTTP);
 
-        // Pido permisos para activar el Bluetooth
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-        {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, POSITION_REQUEST_CODE);
-        }else{
-            findBluetooth();
-        }
 
         //Defino comportamiento Swipe
         touchPanel.setOnTouchListener(new OnSwipeTouchListener(getApplicationContext()) {
@@ -123,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
+        //Reproductor de Voz
         t1=new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
             @Override
             public void onInit(int status) {
@@ -132,6 +129,22 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+        //Botón para consultas HTTP (Prueba)
+        btnBuscarHTTP.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                HTTPConectionThread thread = new HTTPConectionThread(MainActivity.this);
+                thread.execute("http://sherly.riddle.com.ar/query.php");
+            }
+        });
+
+        // Pido permisos para activar el Bluetooth
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+        {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, POSITION_REQUEST_CODE);
+        }else{
+            findBluetooth();
+        }
     }
 
     private void findBluetooth(){
@@ -149,6 +162,7 @@ public class MainActivity extends AppCompatActivity {
             findBT();
         }
         catch (Exception ex) {
+            spinner.setVisibility(View.GONE);
             Log.d(DEBUG_TAG, "No se pudo utilizar el Bluetooth" + ex.getMessage());
             Toast.makeText(MainActivity.this, "Bluetooth no disponible, reintente nuevamente" , Toast.LENGTH_LONG).show();
         }
@@ -165,6 +179,18 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(),result.get(0).toString(),Toast.LENGTH_LONG).show();
                 }
                 break;
+            }
+            case BLUETOOTH_REQUEST_CODE: {
+                if (resultCode == RESULT_OK && null != data) {
+                    findBluetooth();
+                    break;
+                }
+                if (resultCode == RESULT_CANCELED){
+                    Log.d(DEBUG_TAG, "No se obtuvieron permisos para activar Bluetooth.");
+                    finish();
+                    System.exit(0);
+                    break;
+                }
             }
         }
     }
@@ -214,9 +240,11 @@ public class MainActivity extends AppCompatActivity {
                 if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)) {
                     Log.d(DEBUG_TAG, "Buscando dispositivos Bluetooth...");
                     spinner.setVisibility(View.VISIBLE);
+                    Toast.makeText(getApplicationContext(),"Buscando dispositivos Bluetooth...",Toast.LENGTH_LONG).show();
                     //discovery starts, we can show progress dialog or perform other tasks
                 } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
                     Log.d(DEBUG_TAG, "Búsqueda Bluetooth finalizada.");
+                    Toast.makeText(getApplicationContext(),"Búsqueda finalizada",Toast.LENGTH_LONG).show();
                     spinner.setVisibility(View.GONE);
                 } else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                     Log.d(DEBUG_TAG, "Se encontró un dispositivo Bluetooth");
@@ -302,11 +330,12 @@ public class MainActivity extends AppCompatActivity {
         {
             Log.d(DEBUG_TAG,"Solicitando al usuario activar Bluetooth...");
             Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBluetooth, 0);
+            startActivityForResult(enableBluetooth, BLUETOOTH_REQUEST_CODE);
+            return;
         }
-        spinner.setVisibility(View.VISIBLE);
         //obtengo los dipositivos emparejados con el móvil
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+        Toast.makeText(getApplicationContext()," Busacando a "+ DEVICE_NAME + "entre dispositivos vinculados...",Toast.LENGTH_LONG).show();
         if(pairedDevices.size() > 0)
         {
             for(BluetoothDevice device : pairedDevices)
