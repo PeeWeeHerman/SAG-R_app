@@ -90,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
         spinner = findViewById(R.id.loading);
         touchPanel = findViewById(R.id.touchPanel);
         mReceiver = getBroadcastReceiver();
-        btnBuscarHTTP = findViewById(R.id.buscarHTTP);
+        //btnBuscarHTTP = findViewById(R.id.buscarHTTP);
 
 
         //Defino comportamiento Swipe
@@ -130,14 +130,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         //Botón para consultas HTTP (Prueba)
-        btnBuscarHTTP.setOnClickListener(new View.OnClickListener() {
+        /*btnBuscarHTTP.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 HTTPConectionThread thread = new HTTPConectionThread(MainActivity.this);
                 thread.execute("http://sherly.riddle.com.ar/query.php");
             }
         });
-
+*/
         // Pido permisos para activar el Bluetooth
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
         {
