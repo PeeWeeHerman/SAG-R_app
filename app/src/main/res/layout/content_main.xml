@@ -9,18 +9,32 @@
     tools:showIn="@layout/activity_main">
 
     <TextView
-        android:id="@+id/touchPanel"
+        android:id="@+id/mapa"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true">
+
     </TextView>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/touchPanel"
+        android:orientation="vertical"></LinearLayout>
     <!--<Button
         android:id="@+id/buscarHTTP"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="URL"
-        android:visibility="gone"/>
+        android:text="Buscar mapa"
+        />
 -->
+
+    <EditText
+        android:id="@+id/idMapa"
+        android:layout_marginTop="120dp"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:inputType="text"/>
     <ProgressBar
         android:id="@+id/loading"
         style="?android:attr/progressBarStyleLarge"

@@ -7,30 +7,28 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import ingenieria.de.software.sherly.model.Camino;
-import ingenieria.de.software.sherly.model.Nodo;
+import ingenieria.de.software.sherly.model.Edge;
+import ingenieria.de.software.sherly.model.Map;
+import ingenieria.de.software.sherly.model.Node;
 
 class HTTPConectionThread extends AsyncTask<String, String, String> {
-    private Activity activity;
+    private MainActivity activity;
 
 
-    public HTTPConectionThread(Activity activity){
+    public HTTPConectionThread(MainActivity activity){
         this.activity = activity;
     }
     @Override
@@ -71,8 +69,11 @@ class HTTPConectionThread extends AsyncTask<String, String, String> {
         super.onPostExecute(result);
         try{
             Gson gson = new Gson();
-            List<Nodo> nodos = (List<Nodo>) gson.fromJson(result,Nodo.class);
-            Toast.makeText(activity,result,Toast.LENGTH_LONG).show();
+            Map mapa = (Map)gson.fromJson(result, Map.class);
+            Toast.makeText(activity,mapa.toString(),Toast.LENGTH_LONG).show();
+            TextView text = activity.findViewById(R.id.mapa);
+            text.setText(mapa.toString());
+            activity.setMapa(mapa);
         }catch(Exception e){
             Log.d("Estado SHERLY:","No se pudo convertir a JSON la respusta");
         }

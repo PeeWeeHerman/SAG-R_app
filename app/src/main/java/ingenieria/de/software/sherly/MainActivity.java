@@ -18,6 +18,8 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -35,6 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -44,6 +47,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.MotionEventCompat;
+import ingenieria.de.software.sherly.model.Edge;
+import ingenieria.de.software.sherly.model.Map;
+import ingenieria.de.software.sherly.model.Node;
 
 public class MainActivity extends AppCompatActivity {
     //nombre del dispositivo emparejado (en nuestro caso va a ser dinámico)
@@ -71,12 +77,14 @@ public class MainActivity extends AppCompatActivity {
     //imagen de "cargando"
     ProgressBar spinner;
     //TextView utilizado para las interacciones SWIPE (mide el tamaño de la pantalla)
-    TextView touchPanel;
+    LinearLayout touchPanel;
     //Interceptor para el evento de encontrar a SHERLY
     private static BroadcastReceiver  mReceiver;
     TextToSpeech t1;
+    EditText idMapa;
     Button btnBuscarHTTP;
 
+    Map mapa;
     /**
      Método que se ejecuta cuando se crea un Activity o pantalla
      */
@@ -88,28 +96,68 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         spinner = findViewById(R.id.loading);
-        touchPanel = findViewById(R.id.touchPanel);
+        spinner.setVisibility(View.GONE);
+        touchPanel = (LinearLayout) findViewById(R.id.touchPanel);
         mReceiver = getBroadcastReceiver();
+        idMapa = (EditText) findViewById(R.id.idMapa);
         //btnBuscarHTTP = findViewById(R.id.buscarHTTP);
 
+        idMapa.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                HTTPConectionThread thread = new HTTPConectionThread(MainActivity.this);
+                thread.execute("http://sherly.riddle.com.ar/query.php?id_mapa="+idMapa.getText());
+            }
+        });
+
+        //Reproductor de Voz
+        t1=new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if(status != TextToSpeech.ERROR) {
+                    t1.setLanguage(new Locale("es", "AR"));
+                    try {
+                        Thread.sleep(1500);
+                        t1.speak("Bienvenido a Guía,", TextToSpeech.QUEUE_FLUSH, null);
+                        Thread.sleep(2000);
+                        t1.speak("Desliza hacia arriba para buscar un destino,", TextToSpeech.QUEUE_FLUSH, null);
+                        Thread.sleep(3500);
+                        t1.speak("Desliza hacia abajo para saber la distancia hacia un destino", TextToSpeech.QUEUE_FLUSH, null);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            }
+        });
 
         //Defino comportamiento Swipe
         touchPanel.setOnTouchListener(new OnSwipeTouchListener(getApplicationContext()) {
             public void onSwipeTop() {
-                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-                try {
-                    startActivityForResult(intent, VOICE_REQUEST_CODE);
-                } catch (ActivityNotFoundException a) {
-                    Toast.makeText(getApplicationContext(),
-                            "Lo siento, no hay microfono",
-                            Toast.LENGTH_SHORT).show();
-                }
                 notifyMovement("Movió arriba", Color.YELLOW);
+                t1.speak("Dí a donde quieres ir", TextToSpeech.QUEUE_FLUSH, null);
+                try {
+                    Thread.sleep(1500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                userVoiceCommand();
             }
             public void onSwipeRight() {
+                t1.speak("Bienvenido a Guía..." +
+                        "Desliza hacia arriba para buscar un destino," +
+                        "Desliza hacia abajo para saber la distancia hacia un destino" , TextToSpeech.QUEUE_FLUSH, null);
                 notifyMovement("Movió derecha", Color.RED);
             }
             public void onSwipeLeft() {
@@ -120,30 +168,38 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //Reproductor de Voz
-        t1=new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
-            @Override
-            public void onInit(int status) {
-                if(status != TextToSpeech.ERROR) {
-                    t1.setLanguage(new Locale("es", "AR"));
-                }
-            }
-        });
+
         //Botón para consultas HTTP (Prueba)
         /*btnBuscarHTTP.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 HTTPConectionThread thread = new HTTPConectionThread(MainActivity.this);
-                thread.execute("http://sherly.riddle.com.ar/query.php");
+                thread.execute("http://sherly.riddle.com.ar/query.php?id_mapa="+4);
             }
         });
 */
+
         // Pido permisos para activar el Bluetooth
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
         {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, POSITION_REQUEST_CODE);
         }else{
             findBluetooth();
+        }
+
+    }
+
+    private void userVoiceCommand(){
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        try {
+            startActivityForResult(intent, VOICE_REQUEST_CODE);
+        } catch (ActivityNotFoundException a) {
+            Toast.makeText(getApplicationContext(),
+                    "Lo siento, no hay microfono",
+                    Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -176,7 +232,11 @@ public class MainActivity extends AppCompatActivity {
                 if (resultCode == RESULT_OK && null != data) {
                     ArrayList result = data
                             .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                    Toast.makeText(getApplicationContext(),result.get(0).toString(),Toast.LENGTH_LONG).show();
+                    Toast toast = Toast.makeText(getApplicationContext(),result.get(0).toString(),Toast.LENGTH_LONG);
+                    LinearLayout toastLayout = (LinearLayout) toast.getView();
+                    TextView toastTV = (TextView) toastLayout.getChildAt(0);
+                    toastTV.setTextSize(30);
+                    toast.show();
                 }
                 break;
             }
@@ -440,12 +500,20 @@ public class MainActivity extends AppCompatActivity {
                                     {
                                         public void run()
                                         {
-                                            t1.speak(data, TextToSpeech.QUEUE_FLUSH, null);
+                                            if(isRFID(data)){
+                                                Node nodo = findNodeByRfid(data);
+                                                String nombreNodo = getNombreNodo(nodo);
+                                                t1.speak("Estás en " + nombreNodo, TextToSpeech.QUEUE_FLUSH, null);
+
+                                            }
+
                                             Toast toast = Toast.makeText(getApplicationContext(),data,Toast.LENGTH_LONG);
                                             LinearLayout toastLayout = (LinearLayout) toast.getView();
                                             TextView toastTV = (TextView) toastLayout.getChildAt(0);
                                             toastTV.setTextSize(30);
                                             toast.show();
+
+
                                         }
                                     });
                                 }
@@ -466,6 +534,26 @@ public class MainActivity extends AppCompatActivity {
         });
         //inicia el thread que escucha desde un socket bluetooth y escribe en pantalla
         workerThread.start();
+    }
+
+    private boolean isRFID(String data){
+        return true;
+    }
+
+    private Node findNodeByRfid(String rfid){
+        for(Node node : mapa.getNodes()){
+            String[] title = node.getTitle().split(":");
+            String titleRfid = title[1];
+            if(titleRfid.equals(rfid)){
+                return node;
+            }
+        }
+        return null;
+    }
+
+    private String getNombreNodo(Node nodo){
+        String[] titleNodo = nodo.getTitle().split(":");
+        return titleNodo[0];
     }
 
     /**
@@ -493,4 +581,11 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(getApplicationContext(),"Se cerró la conexión Bluetooth",Toast.LENGTH_LONG).show();
     }
 
+    public Map getMapa() {
+        return mapa;
+    }
+
+    public void setMapa(Map mapa) {
+        this.mapa = mapa;
+    }
 }

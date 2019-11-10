@@ -1,0 +1,50 @@
+{
+   "nodes":[
+      {
+         "id":2,
+         "title":"Nodo1",
+         "x":436,
+         "y":158
+      },
+      {
+         "id":3,
+         "title":"Nodo 2",
+         "x":769,
+         "y":554
+      },
+      {
+         "id":4,
+         "title":"Nodo 3",
+         "x":1021.2371215820312,
+         "y":51.21833038330078
+      },
+      {
+         "id":5,
+         "title":"Nodo 4",
+         "x":1126.8876953125,
+         "y":433.29736328125
+      }
+   ],
+   "edges":[
+      {
+         "source":"Nodo1",
+         "target":"Nodo 2",
+         "weight":"Camino de 1 a 2"
+      },
+      {
+         "source":"Nodo 2",
+         "target":"Nodo 3",
+         "weight":"Camino de 2 a 3"
+      },
+      {
+         "source":"Nodo 3",
+         "target":"Nodo 4",
+         "weight":"Camino de 3 a 4"
+      },
+      {
+         "source":"Nodo 3",
+         "target":"Nodo1",
+         "weight":"Camino de 3 a 1"
+      }
+   ]
+}
