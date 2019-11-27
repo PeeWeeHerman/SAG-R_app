@@ -27,23 +27,23 @@
    ],
    "edges":[
       {
-         "source":"Nodo1",
-         "target":"Nodo 2",
+         "source":1,
+         "target":2,
          "weight":"Camino de 1 a 2"
       },
       {
-         "source":"Nodo 2",
-         "target":"Nodo 3",
+         "source":2,
+         "target":3,
          "weight":"Camino de 2 a 3"
       },
       {
-         "source":"Nodo 3",
-         "target":"Nodo 4",
+         "source":3,
+         "target":4,
          "weight":"Camino de 3 a 4"
       },
       {
-         "source":"Nodo 3",
-         "target":"Nodo1",
+         "source":3,
+         "target":1,
          "weight":"Camino de 3 a 1"
       }
    ]

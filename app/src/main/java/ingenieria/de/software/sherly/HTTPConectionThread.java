@@ -2,6 +2,7 @@ package ingenieria.de.software.sherly;
 
 import android.app.Activity;
 import android.os.AsyncTask;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -34,7 +35,7 @@ class HTTPConectionThread extends AsyncTask<String, String, String> {
     @Override
     protected String doInBackground(String... uri) {
         String responseString = null;
-        HttpURLConnection conn = null;
+     /*   HttpURLConnection conn = null;
         InputStream inputStream = null;
         try {
             URL url = new URL(uri[0]);
@@ -61,6 +62,57 @@ class HTTPConectionThread extends AsyncTask<String, String, String> {
                 Log.d("Estado SHERLY:","no se pudo desconectar HTTP...");
             }
         }
+*/
+         responseString = "{\n" +
+                "   \"nodes\":[\n" +
+                "      {\n" +
+                "         \"id\":2,\n" +
+                "         \"title\":\"Nodo1:1\",\n" +
+                "         \"x\":436,\n" +
+                "         \"y\":158\n" +
+                "      },\n" +
+                "      {\n" +
+                "         \"id\":3,\n" +
+                "         \"title\":\"Nodo 2:2\",\n" +
+                "         \"x\":769,\n" +
+                "         \"y\":554\n" +
+                "      },\n" +
+                "      {\n" +
+                "         \"id\":4,\n" +
+                "         \"title\":\"Nodo 3:3\",\n" +
+                "         \"x\":1021.2371215820312,\n" +
+                "         \"y\":51.21833038330078\n" +
+                "      },\n" +
+                "      {\n" +
+                "         \"id\":5,\n" +
+                "         \"title\":\"Nodo 4:4\",\n" +
+                "         \"x\":1126.8876953125,\n" +
+                "         \"y\":433.29736328125\n" +
+                "      }\n" +
+                "   ],\n" +
+                "   \"edges\":[\n" +
+                "      {\n" +
+                "         \"source\":1,\n" +
+                "         \"target\":2,\n" +
+                "         \"weight\":\"Camino de 1 a 2\"\n" +
+                "      },\n" +
+                "      {\n" +
+                "         \"source\":2,\n" +
+                "         \"target\":3,\n" +
+                "         \"weight\":\"Camino de 2 a 3\"\n" +
+                "      },\n" +
+                "      {\n" +
+                "         \"source\":3,\n" +
+                "         \"target\":4,\n" +
+                "         \"weight\":\"Camino de 3 a 4\"\n" +
+                "      },\n" +
+                "      {\n" +
+                "         \"source\":3,\n" +
+                "         \"target\":1,\n" +
+                "         \"weight\":\"Camino de 3 a 1\"\n" +
+                "      }\n" +
+                "   ]\n" +
+                "}";
         return responseString;
     }
 
@@ -74,6 +126,7 @@ class HTTPConectionThread extends AsyncTask<String, String, String> {
             TextView text = activity.findViewById(R.id.mapa);
             text.setText(mapa.toString());
             activity.setMapa(mapa);
+            //activity.t1.speak("Bienvenido a Guía,", TextToSpeech.QUEUE_FLUSH, null);
         }catch(Exception e){
             Log.d("Estado SHERLY:","No se pudo convertir a JSON la respusta");
         }

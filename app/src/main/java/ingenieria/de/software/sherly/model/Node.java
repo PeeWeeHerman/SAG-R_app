@@ -1,10 +1,12 @@
 package ingenieria.de.software.sherly.model;
 
+import java.math.BigInteger;
+
 public class Node {
     private String id;
     private String title;
-    private long x;
-    private long y;
+    private float x;
+    private float y;
 
     public String getId() {
         return id;
@@ -22,19 +24,19 @@ public class Node {
         this.title = title;
     }
 
-    public long getX() {
+    public float getX() {
         return x;
     }
 
-    public void setX(long x) {
+    public void setX(float x) {
         this.x = x;
     }
 
-    public long getY() {
+    public float getY() {
         return y;
     }
 
-    public void setY(long y) {
+    public void setY(float y) {
         this.y = y;
     }
 
