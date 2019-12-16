@@ -35,7 +35,7 @@ class HTTPConectionThread extends AsyncTask<String, String, String> {
     @Override
     protected String doInBackground(String... uri) {
         String responseString = null;
-     /*   HttpURLConnection conn = null;
+        HttpURLConnection conn = null;
         InputStream inputStream = null;
         try {
             URL url = new URL(uri[0]);
@@ -62,8 +62,8 @@ class HTTPConectionThread extends AsyncTask<String, String, String> {
                 Log.d("Estado SHERLY:","no se pudo desconectar HTTP...");
             }
         }
-*/
-         responseString = "{\n" +
+
+       /*  responseString = "{\n" +
                 "   \"nodes\":[\n" +
                 "      {\n" +
                 "         \"id\":2,\n" +
@@ -113,6 +113,8 @@ class HTTPConectionThread extends AsyncTask<String, String, String> {
                 "      }\n" +
                 "   ]\n" +
                 "}";
+         */
+
         return responseString;
     }
 
@@ -123,8 +125,8 @@ class HTTPConectionThread extends AsyncTask<String, String, String> {
             Gson gson = new Gson();
             Map mapa = (Map)gson.fromJson(result, Map.class);
             Toast.makeText(activity,mapa.toString(),Toast.LENGTH_LONG).show();
-            TextView text = activity.findViewById(R.id.mapa);
-            text.setText(mapa.toString());
+          //  TextView text = activity.findViewById(R.id.mapa);
+          //  text.setText(mapa.toString());
             activity.setMapa(mapa);
             //activity.t1.speak("Bienvenido a Guía,", TextToSpeech.QUEUE_FLUSH, null);
         }catch(Exception e){

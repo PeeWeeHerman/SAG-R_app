@@ -112,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
         });
 */
         HTTPConectionThread thread = new HTTPConectionThread(MainActivity.this);
-        thread.execute("http://sherly.riddle.com.ar/query.php?id_mapa="+4);
+        thread.execute("http://sherly.riddle.com.ar/query.php?id_mapa="+15);
 
         //Reproductor de Voz
         t1 = new TextToSpeech(getApplicationContext(), new TextToSpeech.OnInitListener() {
@@ -362,7 +362,7 @@ private void msg(){
     void beginListenForData()
     {
         final Handler handler = new Handler();
-        final byte delimiter = 32; //Utilizamos el punto (.) como último caracter para entender que el emisor termina de mandarnos datos
+        final byte delimiter = 10; //Utilizamos el salto de linea (\n) como último caracter para entender que el emisor termina de mandarnos datos
 
         stopWorker = false;
         readBufferPosition = 0;
@@ -409,15 +409,20 @@ private void msg(){
 
                                             }*/
                                             String dataReplace = data.replace("\r","");
-
-                                            Node nodo = findNodeByRfid(dataReplace.split(":")[1]);
+                                            /*String valorNodo = dataReplace.indexOf(":")>-1?dataReplace.split(":")[1]:null;
+                                            if(valorNodo == null){
+                                                t1.speak("No se pudo identificar el lugar", TextToSpeech.QUEUE_FLUSH, null);
+                                                return;
+                                            }
+                                            */
+                                            Node nodo = findNodeByRfid(dataReplace);
                                             String nombre = nodo.getTitle();
 
                                             t1.speak("Estás en " + nombre, TextToSpeech.QUEUE_FLUSH, null);
 
                                             //Toast toast = Toast.makeText(activity.getApplicationContext(),data,Toast.LENGTH_LONG);
                                             Log.d(DEBUG_TAG,"info de sherly" +data);
-                                            /*LinearLayout toastLayout = (LinearLayout) toast.getView();
+                                            /*LinearLayout toastLayout = (LinearLayout) tost.getVaiew();
                                             TextView toastTV = (TextView) toastLayout.getChildAt(0);
                                             toastTV.setTextSize(30);
                                             toast.show();*/
